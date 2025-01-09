@@ -29,3 +29,70 @@
   ```bash
   pip install PyQt5
   ```
+### Installation and Setup
+   1. **Install Required Python Packages**
+   Run the following command to install all required dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+   2. **Generate the Executable**
+To create a standalone executable, run:
+
+```bash
+pyinstaller --onefile --noconsole folder_protection.py
+```
+3. Add Context Menu Options
+Run the RegistryScript.py to add "Lock Folder" and "Unlock Folder" options to the Windows context menu:
+
+```bash
+python RegistryScript.py
+```
+## Usage
+### Using the GUI
+1. Run the executable or script:
+```bash
+python folder_protection.py
+```
+OR
+```bash
+dist/folder_protection.exe
+```
+2. Enter the folder path and choose to lock or unlock it.
+3. Provide a password to secure or unlock the folder.
+### Using the Context Menu
+1. Right-click on any folder in Windows Explorer.
+2. Select "Lock Folder" or "Unlock Folder" from the menu.
+3. Follow the prompts to lock/unlock the folder.
+
+## Registry Script
+
+RegistryScript.py manages the context menu entries for Windows Explorer.
+
+Add or remove "Lock Folder" and "Unlock Folder" options as needed.
+
+## File Structure
+
+The project structure is as follows:
+
+```
+HushBox/
+├── folder_protection.py    # Main folder locking/unlocking application
+├── RegistryScript.py       # Script to manage Windows registry entries
+├── icons/
+│   ├── lock.ico            # Icon for "Lock Folder"
+│   ├── unlock.ico          # Icon for "Unlock Folder"
+├── info.txt                # PyInstaller and registry setup instructions
+```
+## Contributing
+Feel free to fork the repository and submit pull requests for improvements or bug fixes. Contributions are always welcome!
+
+
+## License
+This project is licensed under the MIT License. See the LICENSE file for more details.
+
+## Author
+Priyansh C. Choudhary
+
+## Acknowledgments
+Built with ❤️ to keep your private folders safe!
