@@ -1,0 +1,200 @@
+pyinstaller --onefile --noconsole folder_protector.py
+
+D:\Projects\File Locker\dist\folder_protector.exe
+
+REG ADD "HKCU\Software\Classes\Directory\shell\Lock Folder" /v Icon /t REG_SZ /d "D:\Projects\File Locker\icons\lock.ico" /f
+REG ADD "HKCU\Software\Classes\Directory\shell\Lock Folder\command" /t REG_SZ /d "\"D:\Projects\File Locker\dist\folder_protector.exe\" lock \"%1\"" /f
+
+REG ADD "HKCU\Software\Classes\Directory\shell\Unlock Folder" /v Icon /t REG_SZ /d "D:\Projects\File Locker\icons\unlock.ico" /f
+REG ADD "HKCU\Software\Classes\Directory\shell\Unlock Folder\command" /t REG_SZ /d "\"D:\Projects\File Locker\dist\folder_protector.exe\" unlock \"%1\"" /f
+
+
+import os
+import sys
+import hashlib
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QPushButton,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QVBoxLayout,
+    QHBoxLayout,
+    QWidget,
+    QFrame,
+)
+from PyQt5.QtGui import QFont, QPalette, QColor
+from PyQt5.QtCore import Qt
+
+
+class FolderProtector(QMainWindow):
+    def __init__(self, folder_path=None, mode="lock"):
+        super().__init__()
+        self.folder_path = folder_path
+        self.mode = mode
+        self.setWindowTitle("Folder Protector")
+        self.setGeometry(300, 200, 400, 300)
+        self.setStyleSheet(self.load_styles())
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout()
+        layout.setSpacing(20)
+
+        # Title label
+        self.title_label = QLabel("🔒 Lock Folder" if self.mode == "lock" else "🔓 Unlock Folder")
+        self.title_label.setFont(QFont("Arial", 18, QFont.Bold))
+        self.title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.title_label)
+
+        # Folder path display
+        self.folder_label = QLabel(self.folder_path if self.folder_path else "No folder selected")
+        self.folder_label.setFont(QFont("Arial", 10))
+        self.folder_label.setAlignment(Qt.AlignCenter)
+        self.folder_label.setWordWrap(True)
+        self.folder_label.setStyleSheet("color: var(--muted-foreground);")
+        layout.addWidget(self.folder_label)
+
+        # Password input
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText(
+            "Enter password" if self.mode == "lock" else "Enter unlock password"
+        )
+        self.password_input.setEchoMode(QLineEdit.Password)
+        self.password_input.setFixedHeight(40)
+        self.password_input.setStyleSheet("border-radius: var(--radius); padding: 0 10px;")
+        layout.addWidget(self.password_input)
+
+        # Lock/Unlock button
+        self.action_button = QPushButton(
+            "🔒 Lock Folder" if self.mode == "lock" else "🔓 Unlock Folder"
+        )
+        self.action_button.setFixedHeight(40)
+        self.action_button.setStyleSheet("""
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+            border-radius: var(--radius);
+        """)
+        self.action_button.clicked.connect(
+            self.lock_folder if self.mode == "lock" else self.unlock_folder
+        )
+        layout.addWidget(self.action_button)
+
+        # Add a frame for spacing and minimalism
+        spacer_frame = QFrame()
+        spacer_frame.setFrameShape(QFrame.HLine)
+        spacer_frame.setStyleSheet("color: var(--border);")
+        layout.addWidget(spacer_frame)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+    def lock_folder(self):
+        password = self.password_input.text().strip()
+        if not password:
+            self.show_message("Error", "Password cannot be empty.")
+            return
+
+        lock_file = os.path.join(self.folder_path, ".lock")
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        # Save the password hash
+        with open(lock_file, "w") as f:
+            f.write(password_hash)
+
+        # Restrict folder access
+        os.system(f'icacls "{self.folder_path}" /deny Everyone:F')
+        self.show_message("Success", f"The folder '{self.folder_path}' has been locked.")
+
+    def unlock_folder(self):
+        password = self.password_input.text().strip()
+        if not password:
+            self.show_message("Error", "Password cannot be empty.")
+            return
+
+        lock_file = os.path.join(self.folder_path, ".lock")
+        if not os.path.exists(lock_file):
+            self.show_message("Error", "This folder is not locked.")
+            return
+
+        with open(lock_file, "r") as f:
+            stored_hash = f.read().strip()
+
+        entered_hash = hashlib.sha256(password.encode()).hexdigest()
+        if stored_hash != entered_hash:
+            self.show_message("Error", "Incorrect password.")
+            return
+
+        # Restore folder access
+        os.system(f'icacls "{self.folder_path}" /grant Everyone:F')
+        os.remove(lock_file)
+        self.show_message("Success", f"The folder '{self.folder_path}' has been unlocked.")
+
+    def show_message(self, title, message):
+        msg = QMessageBox(self)
+        msg.setWindowTitle(title)
+        msg.setText(message)
+        msg.exec_()
+
+    def load_styles(self):
+        return """
+            :root {
+                --background: #ffffff;
+                --foreground: #1a1a1a;
+                --card: #f5f5f5;
+                --card-foreground: #1a1a1a;
+                --primary: #333333;
+                --primary-foreground: #ffffff;
+                --secondary: #e0e0e0;
+                --secondary-foreground: #333333;
+                --muted: #d3d3d3;
+                --muted-foreground: #555555;
+                --border: #cccccc;
+                --radius: 8px;
+            }
+
+            QMainWindow {
+                background-color: var(--background);
+                color: var(--foreground);
+            }
+
+            QLabel {
+                color: var(--foreground);
+            }
+
+            QLineEdit {
+                background-color: var(--card);
+                color: var(--card-foreground);
+                border: 1px solid var(--border);
+                padding: 8px;
+            }
+
+            QPushButton {
+                border: none;
+                font-weight: bold;
+            }
+
+            QPushButton:hover {
+                background-color: var(--secondary);
+                color: var(--secondary-foreground);
+            }
+        """
+
+
+# Run the application
+if __name__ == "__main__":
+    folder_to_process = None
+    mode = "lock"
+
+    # Parse command-line arguments
+    if len(sys.argv) > 1:
+        mode = sys.argv[1]  # "lock" or "unlock"
+        if len(sys.argv) > 2:
+            folder_to_process = sys.argv[2]
+
+    app = QApplication([])
+    window = FolderProtector(folder_path=folder_to_process, mode=mode)
+    window.show()
+    app.exec_()
